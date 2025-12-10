@@ -90,7 +90,10 @@ import warnings
 
 from matplotlib.colors import LogNorm
 from astropy.table import Table
-from ginga.util import zscale
+try:
+    from ginga.util import zscale
+except:
+    from ginga.AutoCuts import ZScale
 from photutils.segmentation import (detect_sources,
                                     detect_threshold,
                                     SourceCatalog)
@@ -433,7 +436,10 @@ def show_source_detection_plot(data, coo_tab):
     -------
         Window with plot.
     """
-    z1, z2 = zscale.zscale(data)
+    try:
+        z1, z2 = zscale.zscale(data)
+    except:
+        z1, z2 = Zscale(data)
 
     fig, ax = plt.subplots(figsize=(5,5))
     ax.imshow(data, origin='lower', cmap='Greys_r', vmin=z1, vmax=z2)
