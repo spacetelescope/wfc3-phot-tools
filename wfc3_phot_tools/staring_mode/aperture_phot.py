@@ -388,7 +388,7 @@ def iraf_style_photometry(phot_aps, bg_aps, data,
     if callable(phot_aps.area):
         ap_area = phot_aps.area()
     else:
-        ap_area = phot_apertures.area
+        ap_area = phot_aps.area
     bg_method_name = 'aperture_{}'.format(bg_method)
 
     flux = phot['aperture_sum'] - bg_phot[bg_method_name] * ap_area
