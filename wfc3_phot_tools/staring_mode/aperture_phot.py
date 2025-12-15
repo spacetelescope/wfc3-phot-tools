@@ -255,7 +255,7 @@ def compute_iraf_style_error(flux_var, bg_phot, bg_method, ap_area, epadu=1.0):
     ----------
     flux_var :
     bg_phot :
-    bg_method :
+    bg_method : -- not used?
     ap_area :
     epadu : float
 
@@ -264,7 +264,7 @@ def compute_iraf_style_error(flux_var, bg_phot, bg_method, ap_area, epadu=1.0):
     flux_error : float
     """
     bg_variance_terms = (ap_area * bg_phot['aperture_std'] ** 2. ) \
-                        * (1. + ap_area/bg_phot['aperture_area'])
+                        * (1. + ap_area/bg_phot['aperture_nonnan_area'])
     variance = flux_var / epadu + bg_variance_terms
     flux_error = variance ** .5
 
@@ -392,28 +392,36 @@ def iraf_style_photometry(phot_aps, bg_aps, data,
     bg_method_name = 'aperture_{}'.format(bg_method)
 
     flux = phot['aperture_sum'] - bg_phot[bg_method_name] * ap_area
+#    if flux < 0:
+    #print(flux[0])
+    #print(f'\tback: {bg_phot[bg_method_name][0]}')
+    #print(f'\tarea: {ap_area}')
 
     # To calculate error, need variance of sources for Poisson noise term.
     # This means photometric error needs to be squared (if error array existed).
-    if error_array is not None:
+    # If `error_array` does not exist, error = bg-subtracted flux ** .5.
+    if isinstance(error_array, type(None)):
+        flux_error = compute_iraf_style_error(flux**0.5, bg_phot, bg_method,
+                                              ap_area, epadu)
+    else:
         flux_error = compute_iraf_style_error(phot['aperture_sum_err']**2.0,
                                               bg_phot, bg_method, ap_area,
                                               epadu)
-
-    # If `error_array` does not exist, error = bg-subtracted flux ** .5.
-    else:
-        flux_error = compute_iraf_style_error(flux**0.5, bg_phot, bg_method,
-                                              ap_area, epadu)
 
     mag = -2.5 * np.log10(flux)
     mag_err = 1.0857 * flux_error / flux
 
     # Make the final table.
-    X, Y = phot_apertures.positions.T
-    stacked = np.stack([X, Y, flux, flux_error, mag, mag_err, ap_area], axis=1)
-    names = ['X', 'Y', 'flux', 'flux_error', 'mag', 'mag_error', 'phot_ap_area']
+    X, Y = phot_aps.positions.T
 
-    final_tbl = Table(data=stacked, names=names)
+    final_tbl = Table()
+    final_tbl['X'] = [X]
+    final_tbl['Y'] = [Y]
+    final_tbl['flux'] = flux
+    final_tbl['flux_error'] = flux_error
+    final_tbl['mag'] = mag
+    final_tbl['mag_error'] = mag_err
+    final_tbl['phot_ap_area'] = ap_area
 
     return final_tbl
 
