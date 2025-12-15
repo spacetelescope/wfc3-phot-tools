@@ -100,7 +100,7 @@ from photutils.segmentation import (detect_sources,
 from photutils.aperture import (aperture_photometry,
                                 CircularAnnulus,
                                 CircularAperture)
-#from background import make_aperture_stats_tbl, calc_1d_gauss_background
+
 from wfc3_phot_tools.staring_mode.background import make_aperture_stats_tbl, calc_1d_gauss_background
 
 def _fit_gaussian(data, bins, hist_ranges):
@@ -159,10 +159,6 @@ def calc_sky_annulus(data, x, y, r_in, r_out, sky_method='median',
     Refactored Gaussian fit section to utilize new helper
     function `_fit_gaussian()`, which eliminates the need
     for several nested try/except loops.
-
-    To-Do:
-    ------
-        - Move to `background.py`
 
     Parameters
     ----------
@@ -255,7 +251,6 @@ def compute_iraf_style_error(flux_var, bg_phot, bg_method, ap_area, epadu=1.0):
     ----------
     flux_var :
     bg_phot :
-    bg_method : -- not used?
     ap_area :
     epadu : float
 
@@ -392,10 +387,6 @@ def iraf_style_photometry(phot_aps, bg_aps, data,
     bg_method_name = 'aperture_{}'.format(bg_method)
 
     flux = phot['aperture_sum'] - bg_phot[bg_method_name] * ap_area
-#    if flux < 0:
-    #print(flux[0])
-    #print(f'\tback: {bg_phot[bg_method_name][0]}')
-    #print(f'\tarea: {ap_area}')
 
     # To calculate error, need variance of sources for Poisson noise term.
     # This means photometric error needs to be squared (if error array existed).
