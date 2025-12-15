@@ -108,7 +108,7 @@ def calc_aperture_stats(data, mask, sigma_clip):
         mean = median = mode = std = actual_area = -9999.
 
     else:
-        values = cutout * mask.data / mask.data  # preserves shape of cutout
+        values = cutout
         values = values[~np.isnan(values)]
 
         if sigma_clip:
@@ -176,7 +176,14 @@ def make_aperture_stats_tbl(data, apertures, method='exact', sigma_clip=True):
                                       'aperture_mode', 'aperture_std',
                                       'aperture_nonnan_area'))
 
-    aperture_stats_tbl['x'] = [position[0] for position in apertures.positions]
-    aperture_stats_tbl['y'] = [position[1] for position in apertures.positions]
+    # Hopefully this will maintain backwards compatibility
+    if apertures.positions.shape == (2,):
+        aperture_stats_tbl['x'] = [apertures.positions[0]]
+        aperture_stats_tbl['y'] = [apertures.positions[1]]
+
+    else:
+        aperture_stats_tbl['x'] = [position[0] for position in apertures.positions]
+        aperture_stats_tbl['y'] = [position[1] for position in apertures.positions]
+
 
     return aperture_stats_tbl

@@ -100,7 +100,7 @@ from photutils.segmentation import (detect_sources,
 from photutils.aperture import (aperture_photometry,
                                 CircularAnnulus,
                                 CircularAperture)
-#from background import make_aperture_stats_tbl, calc_1d_gauss_background
+
 from wfc3_phot_tools.staring_mode.background import make_aperture_stats_tbl, calc_1d_gauss_background
 
 def _fit_gaussian(data, bins, hist_ranges):
@@ -159,10 +159,6 @@ def calc_sky_annulus(data, x, y, r_in, r_out, sky_method='median',
     Refactored Gaussian fit section to utilize new helper
     function `_fit_gaussian()`, which eliminates the need
     for several nested try/except loops.
-
-    To-Do:
-    ------
-        - Move to `background.py`
 
     Parameters
     ----------
@@ -255,7 +251,6 @@ def compute_iraf_style_error(flux_var, bg_phot, bg_method, ap_area, epadu=1.0):
     ----------
     flux_var :
     bg_phot :
-    bg_method :
     ap_area :
     epadu : float
 
@@ -264,7 +259,7 @@ def compute_iraf_style_error(flux_var, bg_phot, bg_method, ap_area, epadu=1.0):
     flux_error : float
     """
     bg_variance_terms = (ap_area * bg_phot['aperture_std'] ** 2. ) \
-                        * (1. + ap_area/bg_phot['aperture_area'])
+                        * (1. + ap_area/bg_phot['aperture_nonnan_area'])
     variance = flux_var / epadu + bg_variance_terms
     flux_error = variance ** .5
 
@@ -395,25 +390,29 @@ def iraf_style_photometry(phot_aps, bg_aps, data,
 
     # To calculate error, need variance of sources for Poisson noise term.
     # This means photometric error needs to be squared (if error array existed).
-    if error_array is not None:
+    # If `error_array` does not exist, error = bg-subtracted flux ** .5.
+    if isinstance(error_array, type(None)):
+        flux_error = compute_iraf_style_error(flux**0.5, bg_phot, bg_method,
+                                              ap_area, epadu)
+    else:
         flux_error = compute_iraf_style_error(phot['aperture_sum_err']**2.0,
                                               bg_phot, bg_method, ap_area,
                                               epadu)
-
-    # If `error_array` does not exist, error = bg-subtracted flux ** .5.
-    else:
-        flux_error = compute_iraf_style_error(flux**0.5, bg_phot, bg_method,
-                                              ap_area, epadu)
 
     mag = -2.5 * np.log10(flux)
     mag_err = 1.0857 * flux_error / flux
 
     # Make the final table.
-    X, Y = phot_apertures.positions.T
-    stacked = np.stack([X, Y, flux, flux_error, mag, mag_err, ap_area], axis=1)
-    names = ['X', 'Y', 'flux', 'flux_error', 'mag', 'mag_error', 'phot_ap_area']
+    X, Y = phot_aps.positions.T
 
-    final_tbl = Table(data=stacked, names=names)
+    final_tbl = Table()
+    final_tbl['X'] = [X]
+    final_tbl['Y'] = [Y]
+    final_tbl['flux'] = flux
+    final_tbl['flux_error'] = flux_error
+    final_tbl['mag'] = mag
+    final_tbl['mag_error'] = mag_err
+    final_tbl['phot_ap_area'] = ap_area
 
     return final_tbl
 
