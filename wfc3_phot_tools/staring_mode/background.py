@@ -108,7 +108,7 @@ def calc_aperture_stats(data, mask, sigma_clip):
         mean = median = mode = std = actual_area = -9999.
 
     else:
-        values = cutout
+        values = cutout * mask.data / mask.data
         values = values[~np.isnan(values)]
 
         if sigma_clip:
